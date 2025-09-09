@@ -133,7 +133,3 @@ PRs welcome for:
 ## License
 
 **MIT** — Use responsibly and follow your institution’s policies.
-
----
-
-> **Image note:** save the screenshot as `assets/hero.png` in your repo, or update the image path at the top of this README.
