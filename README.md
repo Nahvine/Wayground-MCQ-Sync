@@ -1,7 +1,7 @@
 # Canvas → Wayground MCQ Sync (Tampermonkey Userscript)
 
-![Canvas → Wayground — control panel](<img width="389" height="231" alt="image" src="https://github.com/user-attachments/assets/a5f055ba-a9bc-4644-af20-6f06c48744ca" />
-)
+<img src="https://github.com/user-attachments/assets/a5f055ba-a9bc-4644-af20-6f06c48744ca"
+     alt="Canvas → Wayground — control panel" width="640" />
 
 > **One-click pipeline:** collect Multiple-Choice questions from Canvas, de-duplicate & persist them, then auto-create MCQs in Wayground with strict field mapping, verified fills, and reliable saving. Includes XLSX export (Quizizz-style).
 
