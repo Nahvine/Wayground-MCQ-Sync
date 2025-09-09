@@ -1,179 +1,138 @@
-Canvas → Wayground MCQ Sync (Tampermonkey Userscript)
+# Canvas → Wayground MCQ Sync (Tampermonkey Userscript)
 
-One-click pipeline: collect Multiple-Choice questions from Canvas, de-duplicate and persist them, then auto-create MCQs in Wayground with strict field mapping, verified fills, and reliable saving. Includes XLSX export (Quizizz-style).
+![Canvas → Wayground — control panel](assets/hero.png)
 
-What this userscript does
+> **One-click pipeline:** collect Multiple-Choice questions from Canvas, de-duplicate & persist them, then auto-create MCQs in Wayground with strict field mapping, verified fills, and reliable saving. Includes XLSX export (Quizizz-style).
 
-Collect on Canvas
+---
 
-Grabs all Multiple Choice questions on a quiz history page.
+## Features
 
-Skips “Incorrect” questions.
+- **Collect on Canvas**
+  - Scrapes **Multiple Choice** questions from quiz history pages.
+  - **Skips** questions marked **“Incorrect.”**
+  - Extracts **Question**, **Options A–D**, and **Correct option.**
+  - **De-duplicates** and **persists** your queue across reloads.
 
-Extracts Question, Options A–D, and Correct option.
+- **Post to Wayground**
+  - Works on `https://wayground.com/admin/quiz/*`.
+  - Clicks **Add Question → MCQ**, fills **Question + A/B/C/D**, **marks correct**, then **saves**.
+  - **Strict row mapping:** each option is written to the editor **in the same row** as its tick button `mcq-editor-mark-answer-{i}-button`.
+  - **Verified fills** with retries for each field (prevents missing **D**).
+  - **Strict Save** detection (text + icon) to avoid accidental navigation.
 
-De-duplicates and persists your queue across reloads.
+- **Export to XLSX**
+  - Quizizz-style sheet (falls back to CSV if the XLSX library isn’t ready).
+  - Auto-download **and** prints a **30-second link** in the panel if your browser blocks downloads.
 
-Post to Wayground
+---
 
-Works on https://wayground.com/admin/quiz/*.
+## Quick Start
 
-Clicks Add Question → MCQ, fills Question + A/B/C/D, marks correct, then saves.
+1. Install **Tampermonkey** (or a compatible userscript manager).
+2. Create a new userscript and paste the script from this repo.
+3. Open:
+   - **Canvas**: a quiz history page (e.g., `.../quizzes/.../history?version=1`)
+   - **Wayground**: `https://wayground.com/admin/quiz/...`
+4. In the floating panel:
+   - **Collect** (on Canvas) to add questions to the queue.
+   - **Start** to enable **autorun** (the Wayground tab is “woken up” automatically).
+   - Adjust **Delay (ms)** if needed for slower pages.
+5. Switch to Wayground (or leave it in a background tab). The script will:
+   - Add question → fill A/B/C/D → mark correct → **Save question** → repeat.
+6. Use **Export** at any time (on either tab) to download the current queue as **XLSX/CSV**.
 
-Strict row mapping: each option is written to the editor that sits in the same row as the tick button mcq-editor-mark-answer-{i}-button.
+---
 
-Verified fills with retries per field—prevents silent misses (esp. option D).
+## Panel Controls
 
-No accidental navigation: uses strict “Save question” detection (text + icon) to avoid hitting the wrong button.
+- **Collect** *(Canvas only)* — scrape MCQs (skips *Incorrect*).  
+- **Start / Stop** — enable/disable autorun (Wayground processes the queue).  
+- **Clear** — clear the queue (persistent storage).  
+- **Export** — download XLSX (CSV fallback).  
+- **Delay** — action delay in milliseconds (default `800`).
 
-Export collected data → XLSX
+All actions, retries, and warnings are printed in the log area.
 
-Produces a Quizizz-style sheet with the columns below; falls back to CSV if the XLSX library isn’t loaded.
+---
 
-Auto-downloads and also prints a 30-second download link into the panel (in case the browser blocks auto-download).
+## Export Format (Quizizz-style)
 
-Quick start
+Each row = 1 question.
 
-Install a userscript manager (e.g. Tampermonkey).
+| Column | Meaning                 | Value                                                        |
+|------: |-------------------------|--------------------------------------------------------------|
+| **A**  | Question Text           | From Canvas                                                  |
+| **B**  | Question Type           | Always `Multiple Choice`                                     |
+| **C–F**| Option 1–4              | Options **A–D**                                              |
+| **G**  | Option 5                | **Blank**                                                    |
+| **H**  | Correct Answer          | `1`=A, `2`=B, `3`=C, `4`=D                                   |
+| **I**  | Time in seconds         | `20`                                                         |
 
-Add the script (shown in your repo under Canvas → Wayground MCQ Sync).
+The sheet includes two header rows matching the sample template.
 
-Open:
+---
 
-Canvas: a quiz history page (e.g. .../quizzes/.../history?version=1)
+## How It Works
 
-Wayground: the admin quiz edit page (https://wayground.com/admin/quiz/...)
+- **Storage & Sync:** `GM_setValue`/`GM_getValue` + `GM_addValueChangeListener` keep a persistent queue and wake the other tab. `BroadcastChannel` provides instant cross-tab signaling.
+- **DOM Automation:** robust selectors + retries for TipTap/ProseMirror editors; option editors are located by proximity to the **row’s** correct-tick button.
+- **Strict Save:** finds the **real** “Lưu câu hỏi” button (by text/title/icon) and checks clickability to avoid navigation prompts.
+- **Export:** uses `xlsx.full.min.js` to build a workbook; falls back to CSV. Files are delivered via Blob download; a temporary link (30s) is also printed in the panel.
 
-On Canvas, use the floating panel:
+---
 
-Collect → gathers MCQs from the page into a persistent queue.
+## Requirements & Notes
 
-Start → enables autorun and “wakes” the Wayground tab via BroadcastChannel + GM events.
+- Canvas DOM with `.multiple_choice_question` items and **no** `.incorrect` class for collected items.
+- Wayground MCQ editor with:
+  - Question editor under `#query-editor-tiptap-wrapper`
+  - Option tick buttons `data-testid="mcq-editor-mark-answer-{i}-button"`
+  - TipTap editors close to those buttons
+- If Wayground markup changes, update:
+  - `selectQuestionEditor()`
+  - `findEditorsByRows()` / `nearestEditorTo()`
+  - `findSaveButtonsStrict()` (save detection)
 
-Optional: set a Delay (ms) if your machine or network is slower.
+---
 
-Switch to Wayground or let it wake automatically. The script will:
+## Tech Stack
 
-Add MCQs one by one → fill all fields → tick the correct answer → Save question → proceed.
-
-Export at any time from either panel to get an XLSX/CSV of everything in the current queue.
-
-UI controls (both tabs)
-
-Collect (Canvas only): scrape MCQs from the current page (skips Incorrect).
-
-Start / Stop: toggle autorun. When ON, the Wayground tab begins/continues processing.
-
-Clear: clears the queue (does not clear the “seen” ledger if you implement that in your local fork).
-
-Export: downloads an XLSX (or CSV fallback) of the current queue.
-
-Delay: milliseconds between actions (defaults to 800).
-
-The log panel shows every action, retries, warnings, and errors.
-
-Export format (Quizizz-style)
-
-Each row is one question.
-
-Column	Meaning	Value
-A	Question Text	The question from Canvas
-B	Question Type	Always Multiple Choice
-C–F	Option 1–4	Options A–D in order
-G	Option 5	Always left blank
-H	Correct Answer	1=A, 2=B, 3=C, 4=D
-I	Time in seconds	Always 20
-
-The sheet also contains the standard two header rows your example shows.
-
-How it works (under the hood)
-
-Tampermonkey API:
-@match rules for Canvas & Wayground pages, GM_setValue/GM_getValue for a persistent queue, GM_addValueChangeListener to wake the other tab, and GM_notification (optional toast).
-
-Cross-tab wakeup:
-BroadcastChannel('wg-sync') + GM value bumping → Wayground starts pumping as soon as you press Start on Canvas.
-
-DOM-robust filling:
-
-Question: finds the TipTap/ProseMirror editor in the main query box.
-
-Options A–D: maps each option to the nearest TipTap editor to its own “mark correct” button, with retries and content verification.
-
-Save (strict): picks the real “Lưu câu hỏi” button (matching text/title/icon and clickability) to avoid accidental navigation prompts.
-
-Export:
-Uses xlsx (via CDN) to create an .xlsx. If not available, falls back to CSV.
-Always creates a Blob download and prints a temporary link in the log for manual download.
-
-Installation notes
-
-This userscript expects:
-
-Canvas DOM similar to the sample (questions with .multiple_choice_question, not marked .incorrect).
-
-Wayground MCQ editor with:
-
-Question editor under #query-editor-tiptap-wrapper
-
-Answer rows with data-testid="mcq-editor-mark-answer-{i}-button" + nearby TipTap editors.
-
-If Wayground UI markup changes, adjust the selectors inside:
-
-selectQuestionEditor()
-
-findEditorsByRows() / nearestEditorTo()
-
-Strict save logic (findSaveButtonsStrict())
-
-Tech stack
-
-Tampermonkey userscript
-
-BroadcastChannel + GM_* storage/events (cross-tab signaling)
-
-MutationObserver (resume when UI changes)
-
-ProseMirror/TipTap editor handling (programmatic text insert + verification)
-
-XLSX (xlsx.full.min.js) for binary Excel export, plus Blob/URL for downloads
-
-Vanilla DOM APIs and robust query selectors
-
-Troubleshooting
-
-Wayground doesn’t start after pressing Start on Canvas
-Ensure both tabs are open. The script uses BroadcastChannel + GM bump to wake the Wayground tab; some browsers throttle background tabs—try focusing it once.
-
-Option D left blank
-The script maps by row using each option’s tick button and then verifies content with retries. If your theme injects extra nested wrappers, update findEditorsByRows() to the closest editor container.
-
-“Are you sure you want to leave?” dialog
-The script uses strict save detection to click the correct Save question button. If your Wayground variant adds extra generic buttons with the same data-testid, adjust findSaveButtonsStrict().
-
-No download pops up after Export
-Check “automatic downloads” permissions for the domain. Use the 30-second link printed inside the panel to download manually.
-
-Security & privacy
-
-All data is handled locally in your browser via Tampermonkey.
-
-No external servers receive your quiz data; the only remote dependency is the XLSX CDN (for export).
-
-You can fork the script and self-host the XLSX bundle if needed.
-
-Contributing
+- **Tampermonkey** userscript
+- **BroadcastChannel** + `GM_*` storage/events
+- **MutationObserver** (resume when UI changes)
+- **TipTap/ProseMirror** editor automation
+- **XLSX** (`xlsx.full.min.js`) + **Blob** downloads
+- Vanilla **DOM**/JS (no frameworks)
+
+---
+
+## Troubleshooting
+
+- **Wayground doesn’t start after Start on Canvas**  
+  Ensure both tabs are open/visible at least once. Background tabs can be throttled by the browser.
+- **Option D not filled**  
+  The script maps editors by their **row**; if your theme nests wrappers differently, tweak `findEditorsByRows()`/`nearestEditorTo()`.
+- **“Unsaved changes” dialog**  
+  The script uses **strict save** detection. If your theme adds other generic buttons, update `findSaveButtonsStrict()`.
+- **Export doesn’t download**  
+  Allow automatic downloads for the site or click the **30-second link** shown in the panel.
+
+---
+
+## Contributing
 
 PRs welcome for:
+- Selector updates as Canvas/Wayground evolve  
+- Smarter editor mapping  
+- Extra export formats (JSON, Moodle XML, etc.)
 
-New selectors as Wayground/Canvas evolve
+---
 
-Better heuristics for mapping editors
+## License
 
-Additional export formats (e.g., JSON, Moodle XML)
+**MIT** — Use responsibly and follow your institution’s policies.
 
-License
+---
 
-MIT. Use at your own risk and always respect your institution’s policies.
-
-Hero image: put the provided screenshot at assets/hero.png in your repo (or update the path in the Markdown).
+> **Image note:** save the screenshot as `assets/hero.png` in your repo, or update the image path at the top of this README.
